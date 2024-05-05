@@ -1,0 +1,157 @@
+name: Release
+
+on:
+  workflow_dispatch
+
+jobs:
+  setup:
+    name: Setup
+    uses: tlslink/sslcon/.github/workflows/release-setup.yml@main
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [linux, linux-latest, windows, macos, macos-arm64]
+        include:
+        - build: linux-latest
+          os: ubuntu-22.04
+          qt: 6.6.2
+          arch: gcc_64
+          qt-modules: 'qtwebsockets'
+          # qt-tools: 'tools_ifw'
+          installer-name: opensocks-linux-amd64.run
+        - build: linux
+          os: ubuntu-20.04
+          qt: 6.4.3
+          arch: gcc_64
+          qt-modules: 'qtwebsockets'
+          # qt-tools: 'tools_ifw'
+          installer-name: opensocks-linux-amd64.run
+        - build: windows
+          os: windows-2019
+          qt: 6.6.2
+          arch: win64_msvc2019_64
+          qt-modules: 'qtwebsockets'
+          qt-tools: 'tools_qtcreator'
+          installer-name: opensocks-windows10-amd64.exe
+        - build: macos
+          os: macos-12
+          qt: 6.6.2
+          arch: clang_64
+          qt-modules: 'qtwebsockets'
+          # qt-tools: 'tools_ifw'
+          installer-name: opensocks-installer
+        - build: macos-arm64
+          os: macos-14
+          qt: 6.6.2
+          arch: clang_64
+          qt-modules: 'qtwebsockets'
+          # qt-tools: 'tools_ifw'
+          installer-name: opensocks-installer
+    steps:
+    - if: startsWith(github.ref, 'refs/heads/')
+      shell: bash
+      run: |
+        if [ "${{ matrix.build }}" = "linux-latest" ]; then
+          echo "ARCHIVE_NAME=opensocks-linux_openssl3-amd64.tar.gz" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "linux" ]; then
+          echo "ARCHIVE_NAME=opensocks-linux-amd64.tar.gz" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "windows" ]; then
+          echo "ARCHIVE_NAME=opensocks-windows10-amd64.zip" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "macos" ]; then
+          echo "ARCHIVE_NAME=opensocks-macOS-amd64.dmg" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "macos-arm64" ]; then
+          echo "ARCHIVE_NAME=opensocks-macOS-arm64.dmg" >> $GITHUB_ENV
+        fi
+    - if: startsWith(github.ref, 'refs/tags/')
+      shell: bash
+      run: |
+        if [ "${{ matrix.build }}" = "linux-latest" ]; then
+          echo "ARCHIVE_NAME=opensocks-${{ github.ref_name }}-linux_openssl3-amd64.tar.gz" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "linux" ]; then
+          echo "ARCHIVE_NAME=opensocks-${{ github.ref_name }}-linux-amd64.tar.gz" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "windows" ]; then
+          echo "ARCHIVE_NAME=opensocks-${{ github.ref_name }}-windows10-amd64.zip" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "macos" ]; then
+          echo "ARCHIVE_NAME=opensocks-${{ github.ref_name }}-macOS-amd64.dmg" >> $GITHUB_ENV
+        elif [ "${{ matrix.build }}" = "macos-arm64" ]; then
+          echo "ARCHIVE_NAME=opensocks-${{ github.ref_name }}-macOS-arm64.dmg" >> $GITHUB_ENV
+        fi
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ "${{ matrix.build }}" = "linux" -o "${{ matrix.build }}" = "linux-latest" ]; then
+          sudo apt-get update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q --force-yes \
+          automake cmake git wget libfuse2 desktop-file-utils tree \
+          build-essential libgl1-mesa-dev libxkbcommon-x11-0 libpulse-dev \
+          libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+          libxcb-xinerama0 libxcb-composite0 libxcb-cursor0 libxcb-damage0 \
+          libxcb-dpms0 libxcb-dri2-0 libxcb-dri3-0 libxcb-ewmh2 libxcb-glx0 \
+          libxcb-present0 libxcb-randr0 libxcb-record0 libxcb-render0 libxcb-res0 \
+          libxcb-screensaver0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-util1 \
+          libxkbcommon-x11-dev extra-cmake-modules fcitx-libs-dev
+        fi
+    # https://github.com/ilammy/msvc-dev-cmd
+    - if: matrix.build == 'windows'
+      name: Setup msvc
+      uses: ilammy/msvc-dev-cmd@v1
+    - name: Install Qt
+      # v3，aqtversion 为 2.11，不支持将工具添加到 $PATH，https://github.com/jurplel/install-qt-action
+      uses: jurplel/install-qt-action@v3
+      with:
+        arch: ${{ matrix.arch }}
+        version: ${{ matrix.qt }} # https://download.qt.io/online/qtsdkrepository/
+        modules: ${{ matrix.qt-modules }}
+        tools: ${{ matrix.qt-tools }}
+        install-deps: false
+        cache: false
+        cache-key-prefix: 'cache-qt'
+        aqtversion: '==3.1.*'
+        extra: '--base https://mirrors.ustc.edu.cn/qtproject'  # https://download.qt.io/static/mirrorlist/
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    - name: Build
+      shell: bash
+      run: |
+        if [ "${{ matrix.build }}" = "linux" -o "${{ matrix.build }}" = "linux-latest" ]; then
+          wget -c -nv https://github.com/fcitx/fcitx-qt5/archive/refs/heads/master.zip
+          unzip master.zip
+          cd fcitx-qt5-master
+          cmake -DENABLE_QT5=Off -DENABLE_QT6=On .
+          make -j $(nproc)
+          cd ..
+          
+          wget -c -nv https://github.com/itviewer/libopensocks/releases/download/continuous/libopensocks-linux-amd64.tar.gz
+          tar -zxvf libopensocks-*.tar.gz
+          
+          qmake
+          make -j $(nproc)
+        elif [ "${{ matrix.build }}" = "windows" ]; then
+          rm "C:\Program Files\Git\usr\bin\link.exe"
+          curl -k -L -O https://github.com/itviewer/libopensocks/releases/download/continuous/libopensocks-windows10-amd64.7z
+          7z x -y libopensocks-*.7z
+          
+          qmake
+          "${IQTA_TOOLS}/QtCreator/bin/jom/jom.exe" -j $(nproc) -f Makefile.Release
+        elif [ "${{ matrix.build }}" = "macos" ]; then
+          curl -k -O -L https://github.com/itviewer/libopensocks/releases/download/continuous/libopensocks-macOS-amd64.tar.gz
+          tar -zxvf libopensocks-*.tar.gz
+          
+          sudo rm -rf /Library/Developer/CommandLineTools
+          sudo xcode-select --install
+          qmake
+          make -j $(sysctl -n hw.logicalcpu)
+        elif [ "${{ matrix.build }}" = "macos-arm64" ]; then
+          curl -k -O -L https://github.com/itviewer/libopensocks/releases/download/continuous/libopensocks-macOS-arm64.tar.gz
+          tar -zxvf libopensocks-*.tar.gz
+          
+          sudo rm -rf /Library/Developer/CommandLineTools
+          sudo xcode-select --install
+          qmake
+          make -j $(sysctl -n hw.logicalcpu)
+        fi
+

@@ -12,6 +12,10 @@
 #include <QThreadPool>
 #include <QtWidgets>
 
+#if defined(Q_OS_MACOS)
+#include "macdockiconhandler.h"
+#endif
+
 OpenSocks::OpenSocks(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::OpenSocks)
@@ -26,7 +30,7 @@ OpenSocks::OpenSocks(QWidget *parent)
     setWindowFlags(Qt::CustomizeWindowHint | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint
                    | Qt::WindowCloseButtonHint | Qt::WindowStaysOnTopHint);
 #endif
-    setWindowTitle(appName + " v" + appVersion);
+    setWindowTitle(appName + " UI v" + appVersion);
 
     setFixedSize(geometry().width(), geometry().height());
     center();
@@ -213,8 +217,9 @@ void OpenSocks::afterShowOneTime()
     connect(this, &OpenSocks::proxyStopped, this, &OpenSocks::onProxyStopped);
 
     connect(&timer, &QTimer::timeout, this, [this]() {
-        ui->labelDownload->setText(apiGetDownloadByteSize());
-        ui->labelUpload->setText(apiGetUploadByteSize());
+        ui->labelStats->setText(QString(tr("Download: %1 Upload: %2"))
+                                    .arg(apiGetDownloadByteSize())
+                                    .arg(apiGetUploadByteSize()));
     });
 }
 
@@ -279,8 +284,7 @@ void OpenSocks::onProxyStopped()
         ui->buttonStartStop->setText(tr("Start"));
         actionStart->setEnabled(true);
         actionStop->setEnabled(false);
-        ui->labelDownload->setText(apiGetDownloadByteSize());
-        ui->labelUpload->setText(apiGetUploadByteSize());
+        ui->labelStats->setText("Download: 0.00B Upload: 0.00B");
 
         timer.stop();
     }
