@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=OpenSocks
+Comment=OpenSocks UI
+Terminal=false
+Icon=/opt/opensocks/icon.png
+Exec=/opt/opensocks/bin/opensocks-ui
+StartupNotify=false

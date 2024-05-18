@@ -74,4 +74,16 @@ CMakeLists.txt.user*
 
 build
 libopensocks.*
+out
 *.tar.gz
+*.7z
+*.run
+*.exe
+*.app
+*.dmg
+FLGupr.json
+installer/config/*.png
+installer/config/*.ico
+installer/config/*.icns
+
+.DS_Store

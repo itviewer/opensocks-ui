@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>OpenSocks UI</Name>
+    <Version>2.0.0</Version>
+    <Title>OpenSocks UI</Title>
+    <Publisher>https://anylink.pro</Publisher>
+    <ProductUrl>https://anylink.pro</ProductUrl>
+    <InstallerWindowIcon>icon.png</InstallerWindowIcon>
+    <InstallerApplicationIcon>icon</InstallerApplicationIcon>
+    <StartMenuDir>OpenSocks</StartMenuDir>
+    <TargetDir>@ApplicationsDir@/</TargetDir>
+    <RemoveTargetDir>true</RemoveTargetDir>
+    <WizardShowPageList>false</WizardShowPageList>
+    <SupportsModify>false</SupportsModify>
+    <RepositorySettingsPageVisible>false</RepositorySettingsPageVisible>
+    <MaintenanceToolName>uninstall</MaintenanceToolName>
+    <PersistentLocalCache>false</PersistentLocalCache>
+    <ControlScript>controller.js</ControlScript>
+    <DisableCommandLineInterface>true</DisableCommandLineInterface>
+    <DisableAuthorizationFallback>true</DisableAuthorizationFallback>
+    <SaveDefaultRepositories>false</SaveDefaultRepositories>
+</Installer>
